@@ -13,6 +13,21 @@ else
     DATA_DIR="@CMAKE_INSTALL_PREFIX@/@DATA_DIR@"
 fi
 
+# Function to show error dialog on macOS
+show_error_dialog() {
+    osascript <<'APPLESCRIPT'
+        set dialogResult to display dialog "The Wyrmgus game engine was not found.\n\nWyrmsun requires Wyrmgus to run. Please download and install Wyrmgus from:\n\nhttps://github.com/Andrettin/Wyrmgus" \
+            with title "Wyrmsun - Engine Not Found" \
+            with icon stop \
+            buttons {"Open Download Page", "Cancel"} \
+            default button "Open Download Page"
+
+        if button returned of dialogResult is "Open Download Page" then
+            open location "https://github.com/Andrettin/Wyrmgus/releases"
+        end if
+APPLESCRIPT
+}
+
 # Try to find wyrmgus in various locations
 if [ -x "/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus" ]; then
     WYRMGUS="/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus"
@@ -25,11 +40,7 @@ elif [ -x "$HOME/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus" ]; then
 elif command -v wyrmgus >/dev/null 2>&1; then
     WYRMGUS="wyrmgus"
 else
-    echo "Error: wyrmgus not found. Please install the Wyrmgus engine."
-    echo "Expected locations:"
-    echo "  - /Applications/Wyrmgus.app"
-    echo "  - /usr/local/bin/wyrmgus"
-    echo "  - /opt/homebrew/bin/wyrmgus"
+    show_error_dialog
     exit 1
 fi
 
