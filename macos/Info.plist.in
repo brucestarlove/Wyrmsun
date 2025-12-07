@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Wyrmsun</string>
+    <key>CFBundleDisplayName</key>
+    <string>Wyrmsun</string>
+    <key>CFBundleIdentifier</key>
+    <string>net.andrettin.wyrmsun</string>
+    <key>CFBundleVersion</key>
+    <string>@CMAKE_PROJECT_VERSION@</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@CMAKE_PROJECT_VERSION@</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>WYRM</string>
+    <key>CFBundleExecutable</key>
+    <string>wyrmsun</string>
+    <key>CFBundleIconFile</key>
+    <string>wyrmsun.icns</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright (c) 2013-2024 Andrettin</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.13</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.strategy-games</string>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+</dict>
+</plist>

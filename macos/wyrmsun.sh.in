@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# macOS launch script for Wyrmsun
+# Looks for wyrmgus in common macOS locations
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Check if we're running from an app bundle
+if [ -d "$SCRIPT_DIR/../Resources" ]; then
+    DATA_DIR="$SCRIPT_DIR/../Resources"
+else
+    DATA_DIR="@CMAKE_INSTALL_PREFIX@/@DATA_DIR@"
+fi
+
+# Try to find wyrmgus in various locations
+if [ -x "/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus" ]; then
+    WYRMGUS="/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus"
+elif [ -x "/usr/local/bin/wyrmgus" ]; then
+    WYRMGUS="/usr/local/bin/wyrmgus"
+elif [ -x "/opt/homebrew/bin/wyrmgus" ]; then
+    WYRMGUS="/opt/homebrew/bin/wyrmgus"
+elif [ -x "$HOME/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus" ]; then
+    WYRMGUS="$HOME/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus"
+elif command -v wyrmgus >/dev/null 2>&1; then
+    WYRMGUS="wyrmgus"
+else
+    echo "Error: wyrmgus not found. Please install the Wyrmgus engine."
+    echo "Expected locations:"
+    echo "  - /Applications/Wyrmgus.app"
+    echo "  - /usr/local/bin/wyrmgus"
+    echo "  - /opt/homebrew/bin/wyrmgus"
+    exit 1
+fi
+
+exec "$WYRMGUS" -d "$DATA_DIR" "$@"
