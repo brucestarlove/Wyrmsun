@@ -32,5 +32,9 @@
     <string>public.app-category.strategy-games</string>
     <key>NSSupportsAutomaticGraphicsSwitching</key>
     <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>LSBackgroundOnly</key>
+    <false/>
 </dict>
 </plist>

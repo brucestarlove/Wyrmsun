@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # macOS launch script for Wyrmsun
 # Looks for wyrmgus in common macOS locations
@@ -15,31 +15,41 @@ fi
 
 # Function to show error dialog on macOS
 show_error_dialog() {
-    osascript <<'APPLESCRIPT'
-        set dialogResult to display dialog "The Wyrmgus game engine was not found.\n\nWyrmsun requires Wyrmgus to run. Please download and install Wyrmgus from:\n\nhttps://github.com/Andrettin/Wyrmgus" \
-            with title "Wyrmsun - Engine Not Found" \
-            with icon stop \
-            buttons {"Open Download Page", "Cancel"} \
-            default button "Open Download Page"
+    /usr/bin/osascript -e 'display dialog "The Wyrmgus game engine was not found.
 
-        if button returned of dialogResult is "Open Download Page" then
-            open location "https://github.com/Andrettin/Wyrmgus/releases"
-        end if
-APPLESCRIPT
+Wyrmsun requires Wyrmgus to run. Please download and install Wyrmgus from:
+
+https://github.com/Andrettin/Wyrmgus" with title "Wyrmsun - Engine Not Found" with icon stop buttons {"Open Download Page", "Cancel"} default button "Open Download Page"' -e 'if button returned of result is "Open Download Page" then' -e 'open location "https://github.com/Andrettin/Wyrmgus/releases"' -e 'end if' 2>/dev/null
 }
 
+# Expand $HOME since it may not be set in app bundle context
+USER_HOME="$HOME"
+if [ -z "$USER_HOME" ]; then
+    USER_HOME=$(dscl . -read /Users/$(whoami) NFSHomeDirectory | awk '{print $2}')
+fi
+
 # Try to find wyrmgus in various locations
+WYRMGUS=""
+
 if [ -x "/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus" ]; then
     WYRMGUS="/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus"
 elif [ -x "/usr/local/bin/wyrmgus" ]; then
     WYRMGUS="/usr/local/bin/wyrmgus"
 elif [ -x "/opt/homebrew/bin/wyrmgus" ]; then
     WYRMGUS="/opt/homebrew/bin/wyrmgus"
-elif [ -x "$HOME/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus" ]; then
-    WYRMGUS="$HOME/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus"
-elif command -v wyrmgus >/dev/null 2>&1; then
-    WYRMGUS="wyrmgus"
-else
+elif [ -x "$USER_HOME/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus" ]; then
+    WYRMGUS="$USER_HOME/Applications/Wyrmgus.app/Contents/MacOS/wyrmgus"
+elif [ -x "/usr/bin/wyrmgus" ]; then
+    WYRMGUS="/usr/bin/wyrmgus"
+fi
+
+# If not found in known locations, try PATH
+if [ -z "$WYRMGUS" ]; then
+    WYRMGUS=$(which wyrmgus 2>/dev/null)
+fi
+
+# Show error if wyrmgus not found
+if [ -z "$WYRMGUS" ] || [ ! -x "$WYRMGUS" ]; then
     show_error_dialog
     exit 1
 fi
