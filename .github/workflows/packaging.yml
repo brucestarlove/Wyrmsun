@@ -1,21 +1,24 @@
 ---
-name: Create deb packages
+name: Create packages
 'on':
   push:
     tags:
       v**
   workflow_dispatch:
+
 env:
-  BUILD_DIR: ${{ github.workspace }}/build/
   BUILD_TYPE: Release
-  CMAKE_INSTALL_PREFIX: /usr/
 
 jobs:
-  pack:
+  # Linux Debian package build
+  pack-linux:
     runs-on: ubuntu-latest
+    env:
+      BUILD_DIR: ${{ github.workspace }}/build/
+      CMAKE_INSTALL_PREFIX: /usr/
     steps:
       - name: Check code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install Lintian
         run: sudo apt-get install -y lintian
       - name: Get release version
@@ -41,6 +44,75 @@ jobs:
       - name: Lint package
         run: lintian "${BUILD_DIR}/${PACKAGE_NAME}"
         continue-on-error: true
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb-package
+          path: ${{ env.BUILD_DIR }}/${{ env.PACKAGE_NAME }}
+
+  # macOS DMG package build
+  pack-macos:
+    runs-on: macos-latest
+    env:
+      BUILD_DIR: ${{ github.workspace }}/build/
+    steps:
+      - name: Check code
+        uses: actions/checkout@v4
+      - name: Get release version
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> "$GITHUB_ENV"
+      - name: Set CPU number
+        run: echo "THREADS=$(sysctl -n hw.ncpu)" >> "$GITHUB_ENV"
+      - name: Configure CMake
+        run: >-
+          cmake
+          -S "$GITHUB_WORKSPACE"
+          -B "$BUILD_DIR"
+          -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+          -DBUILD_APP_BUNDLE=ON
+      - name: Build app bundle
+        run: >-
+          cmake
+          --build "$BUILD_DIR"
+          --parallel "$THREADS"
+      - name: Create DMG package
+        run: >-
+          cmake
+          --build "$BUILD_DIR"
+          --target package
+          --parallel "$THREADS"
+      - name: Get package name
+        run: echo "PACKAGE_NAME=$(ls Wyrmsun*.dmg)" >> "$GITHUB_ENV"
+        working-directory: ${{ env.BUILD_DIR }}
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg-package
+          path: ${{ env.BUILD_DIR }}/${{ env.PACKAGE_NAME }}
+
+  # Create GitHub release with all packages
+  release:
+    needs: [pack-linux, pack-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Get release version
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> "$GITHUB_ENV"
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-deb-package
+          path: ./artifacts/
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg-package
+          path: ./artifacts/
+      - name: List artifacts
+        run: ls -la ./artifacts/
+      - name: Get package names
+        run: |
+          echo "DEB_PACKAGE=$(ls ./artifacts/*.deb)" >> "$GITHUB_ENV"
+          echo "DMG_PACKAGE=$(ls ./artifacts/*.dmg)" >> "$GITHUB_ENV"
       - name: Create release
         id: create_release
         uses: actions/create-release@v1
@@ -48,16 +120,32 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: deb packages ${{ github.ref }}
+          release_name: Release ${{ env.RELEASE_VERSION }}
           draft: true
-          # TODO Add 'body-path:' or 'body:'
-      - name: Upload Release Asset
+          body: |
+            ## Wyrmsun ${{ env.RELEASE_VERSION }}
+
+            ### Downloads
+            - **Linux**: `wyrmsun-${{ env.RELEASE_VERSION }}.deb` - Debian/Ubuntu package
+            - **macOS**: `Wyrmsun-${{ env.RELEASE_VERSION }}-macOS.dmg` - macOS disk image
+
+            ### Requirements
+            - The [Wyrmgus](https://github.com/Andrettin/Wyrmgus) game engine must be installed separately.
+      - name: Upload Linux package
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BUILD_DIR }}/${{ env.PACKAGE_NAME }}
-          # Be careful here
+          asset_path: ${{ env.DEB_PACKAGE }}
           asset_name: "wyrmsun-${{ env.RELEASE_VERSION }}.deb"
           asset_content_type: application/vnd.debian.binary-package
+      - name: Upload macOS package
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.DMG_PACKAGE }}
+          asset_name: "Wyrmsun-${{ env.RELEASE_VERSION }}-macOS.dmg"
+          asset_content_type: application/x-apple-diskimage
